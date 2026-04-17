@@ -1,0 +1,13 @@
+<svg width="192" height="192" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="192" height="192" fill="#1e293b"/>
+  
+  <!-- Valuation symbol -->
+  <circle cx="96" cy="96" r="80" fill="#0f172a" stroke="#64748b" stroke-width="2"/>
+  
+  <!-- Uptrend line -->
+  <polyline points="50,120 70,100 90,110 110,80 130,90" fill="none" stroke="#16a34a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Currency symbol -->
+  <text x="96" y="135" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="#16a34a" text-anchor="middle">₹</text>
+</svg>
