@@ -1,13 +1,16 @@
 import Link from "next/link";
-import { calculateValuation } from "@/utils/valuation";
+import { calculateValuation } from "@/utils/valuation-company";
 import type { Transaction, TransactionCategory, ValuationMetrics } from "@/types/valuation";
-import { TRANSACTION_CATEGORIES } from "@/types/valuation";
+import { GROWTH_CATEGORIES, WASTE_CATEGORIES } from "@/types/valuation";
 import { buildValuationSeries, type ValuationSeriesPoint } from "@/lib/valuation-series";
+import { generateMLInsights, type MLInsights } from "@/lib/ml-insights";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseConfig } from "@/lib/supabase/config";
 import { SummaryCards } from "@/components/dashboard/summary-cards";
 import { TransactionForm } from "@/components/dashboard/transaction-form";
-import { ValuationChart } from "@/components/dashboard/valuation-chart";
+import { ValuationChartEnhanced } from "@/components/dashboard/valuation-chart-enhanced";
+import { CompanyStatusCard } from "@/components/dashboard/company-status-card";
+import { MLInsightsCard } from "@/components/dashboard/ml-insights-card";
 import { AuthForm } from "@/components/dashboard/auth-form";
 import { SignOutButton } from "@/components/dashboard/sign-out-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +20,7 @@ interface DashboardData {
   transactions: Transaction[];
   metrics: ValuationMetrics;
   series: ValuationSeriesPoint[];
+  mlInsights: MLInsights;
   errorMessage: string | null;
   authRequired: boolean;
   userEmail: string | null;
@@ -38,7 +42,7 @@ function mapSupabaseErrorMessage(message: string): string {
   return message;
 }
 
-const categorySet = new Set<string>(TRANSACTION_CATEGORIES);
+const categorySet = new Set<string>([...GROWTH_CATEGORIES, ...WASTE_CATEGORIES]);
 
 function isTransactionCategory(value: string): value is TransactionCategory {
   return categorySet.has(value);
@@ -79,6 +83,7 @@ async function getDashboardData(): Promise<DashboardData> {
       transactions: [],
       metrics: emptyMetrics(),
       series: [],
+      mlInsights: generateMLInsights([]),
       errorMessage:
         "Supabase is not configured. Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY.",
       authRequired: false,
@@ -92,6 +97,7 @@ async function getDashboardData(): Promise<DashboardData> {
       transactions: [],
       metrics: emptyMetrics(),
       series: [],
+      mlInsights: generateMLInsights([]),
       errorMessage: "Failed to initialize Supabase server client.",
       authRequired: false,
       userEmail: null,
@@ -108,6 +114,7 @@ async function getDashboardData(): Promise<DashboardData> {
       transactions: [],
       metrics: emptyMetrics(),
       series: [],
+      mlInsights: generateMLInsights([]),
       errorMessage: sessionError.message,
       authRequired: false,
       userEmail: null,
@@ -121,6 +128,7 @@ async function getDashboardData(): Promise<DashboardData> {
       transactions: [],
       metrics: emptyMetrics(),
       series: [],
+      mlInsights: generateMLInsights([]),
       errorMessage: null,
       authRequired: true,
       userEmail: null,
@@ -137,6 +145,7 @@ async function getDashboardData(): Promise<DashboardData> {
       transactions: [],
       metrics: emptyMetrics(),
       series: [],
+      mlInsights: generateMLInsights([]),
       errorMessage: mapSupabaseErrorMessage(error.message),
       authRequired: false,
       userEmail: user.email ?? null,
@@ -146,11 +155,13 @@ async function getDashboardData(): Promise<DashboardData> {
   const transactions = normalizeTransactionRows((data ?? []) as TransactionRow[]);
   const metrics = calculateValuation(transactions);
   const series = buildValuationSeries(transactions);
+  const mlInsights = generateMLInsights(series);
 
   return {
     transactions,
     metrics,
     series,
+    mlInsights,
     errorMessage: null,
     authRequired: false,
     userEmail: user.email ?? null,
@@ -158,7 +169,7 @@ async function getDashboardData(): Promise<DashboardData> {
 }
 
 export default async function DashboardPage() {
-  const { transactions, metrics, series, errorMessage, authRequired, userEmail } =
+  const { transactions, metrics, series, mlInsights, errorMessage, authRequired, userEmail } =
     await getDashboardData();
 
   return (
@@ -166,15 +177,14 @@ export default async function DashboardPage() {
       <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
         <header className="space-y-2">
           <Badge variant="secondary" className="bg-slate-900 text-white">
-            Personal Valuation Tracker
+            Personal Company Simulator
           </Badge>
           <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
-            Dashboard
+            Company Dashboard
           </h1>
           <p className="max-w-2xl text-sm text-slate-600 sm:text-base">
-            Track spending behavior like startup capital flow. Invested transactions
-            increase valuation, Wasted transactions reduce it, and inactivity triggers
-            decay.
+            Track your personal company like a real business. Growth spending builds
+            valuation, waste destroys it faster, and inactivity triggers decay.
           </p>
           {!authRequired && userEmail ? (
             <div className="flex flex-col gap-3 space-y-0 rounded-md border border-slate-200 bg-white p-3 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
@@ -212,12 +222,15 @@ export default async function DashboardPage() {
           </Card>
         ) : null}
 
+        <CompanyStatusCard metrics={metrics} />
+
+        <MLInsightsCard insights={mlInsights} />
+
         <SummaryCards metrics={metrics} />
 
-        <section className="grid gap-6 md:grid-cols-[360px_minmax(0,1fr)]">
-          <TransactionForm disabled={authRequired} />
-          <ValuationChart data={series} />
-        </section>
+        <ValuationChartEnhanced data={series} />
+
+        <TransactionForm disabled={authRequired} />
 
         <Card>
           <CardHeader>
@@ -254,9 +267,13 @@ export default async function DashboardPage() {
                           <td className="py-2">
                             <Badge
                               variant={
-                                transaction.category === "Invested"
+                                (GROWTH_CATEGORIES as readonly string[]).includes(
+                                  transaction.category
+                                )
                                   ? "success"
-                                  : transaction.category === "Wasted"
+                                  : (WASTE_CATEGORIES as readonly string[]).includes(
+                                      transaction.category
+                                    )
                                     ? "danger"
                                     : "secondary"
                               }

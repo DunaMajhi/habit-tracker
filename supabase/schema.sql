@@ -7,12 +7,29 @@ create table if not exists public.transactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   amount numeric(12,2) not null check (amount >= 0),
-  category text not null check (category in ('Invested', 'Wasted', 'OpEx')),
+  category text not null check (category in ('Health', 'Learning', 'Infrastructure', 'Habits', 'Impulse', 'Entertainment')),
   description text not null check (char_length(trim(description)) > 0),
   timestamp timestamptz not null,
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+alter table if exists public.transactions
+  drop constraint if exists transactions_category_check;
+
+-- Convert any legacy categories so the new constraint can be applied safely.
+update public.transactions
+set category = case category
+  when 'Invested' then 'Health'
+  when 'Wasted' then 'Habits'
+  when 'OpEx' then 'Infrastructure'
+  else category
+end
+where category in ('Invested', 'Wasted', 'OpEx');
+
+alter table if exists public.transactions
+  add constraint transactions_category_check
+  check (category in ('Health', 'Learning', 'Infrastructure', 'Habits', 'Impulse', 'Entertainment'));
 
 create index if not exists idx_transactions_user_id on public.transactions (user_id);
 create index if not exists idx_transactions_user_timestamp on public.transactions (user_id, timestamp desc);

@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowDownRight, ArrowUpRight, Landmark } from "lucide-react";
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, Landmark, TrendingDown } from "lucide-react";
 import type { ValuationMetrics } from "@/types/valuation";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +17,7 @@ function formatCurrency(value: number): string {
 
 export function SummaryCards({ metrics }: SummaryCardsProps) {
   return (
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
       <Card className="border-slate-900/20 bg-slate-950 text-white">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-slate-300">
@@ -34,11 +34,11 @@ export function SummaryCards({ metrics }: SummaryCardsProps) {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-500">Total Invested</CardTitle>
+          <CardTitle className="text-sm font-medium text-slate-500">Total Growth</CardTitle>
         </CardHeader>
         <CardContent className="flex items-end justify-between">
           <div className="text-2xl font-bold text-emerald-600">
-            {formatCurrency(metrics.totalInvested)}
+            {formatCurrency(metrics.totalGrowth)}
           </div>
           <ArrowUpRight className="h-5 w-5 text-emerald-600" />
         </CardContent>
@@ -46,13 +46,25 @@ export function SummaryCards({ metrics }: SummaryCardsProps) {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-slate-500">Total Wasted</CardTitle>
+          <CardTitle className="text-sm font-medium text-slate-500">Total Waste</CardTitle>
         </CardHeader>
         <CardContent className="flex items-end justify-between">
           <div className="text-2xl font-bold text-red-600">
-            {formatCurrency(metrics.totalWasted)}
+            {formatCurrency(metrics.totalWaste)}
           </div>
           <ArrowDownRight className="h-5 w-5 text-red-600" />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-slate-500">Operating Expenses</CardTitle>
+        </CardHeader>
+        <CardContent className="flex items-end justify-between">
+          <div className="text-2xl font-bold text-purple-600">
+            {formatCurrency(metrics.totalOpEx)}
+          </div>
+          <TrendingDown className="h-5 w-5 text-purple-600" />
         </CardContent>
       </Card>
 
@@ -69,7 +81,7 @@ export function SummaryCards({ metrics }: SummaryCardsProps) {
           ) : (
             <Badge variant="success">No Active Penalty</Badge>
           )}
-          <div className="text-xs text-slate-500">7-day invested window</div>
+          <div className="text-xs text-slate-500">7-day growth window</div>
         </CardContent>
       </Card>
     </section>

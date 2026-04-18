@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { TRANSACTION_CATEGORIES, type TransactionCategory } from "@/types/valuation";
+import { GROWTH_CATEGORIES, WASTE_CATEGORIES, type TransactionCategory } from "@/types/valuation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,7 +25,7 @@ const transactionSchema = z.object({
     .number()
     .refine((value) => Number.isFinite(value), "Amount must be a number.")
     .positive("Amount must be greater than zero."),
-  category: z.enum(TRANSACTION_CATEGORIES),
+  category: z.enum([...GROWTH_CATEGORIES, ...WASTE_CATEGORIES]),
   description: z
     .string()
     .trim()
@@ -40,6 +40,14 @@ interface TransactionFormProps {
   disabled?: boolean;
 }
 
+function getFriendlyInsertError(message: string): string {
+  if (message.includes("transactions_category_check")) {
+    return "Your database still has the old category constraint. Run supabase/schema.sql in Supabase SQL Editor so the transactions_category_check constraint accepts Health, Learning, Infrastructure, Habits, Impulse, and Entertainment.";
+  }
+
+  return message;
+}
+
 export function TransactionForm({ disabled = false }: TransactionFormProps) {
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -49,7 +57,7 @@ export function TransactionForm({ disabled = false }: TransactionFormProps) {
     resolver: zodResolver(transactionSchema),
     defaultValues: {
       amount: 0,
-      category: "Invested",
+      category: "Health",
       description: "",
     },
   });
@@ -94,14 +102,14 @@ export function TransactionForm({ disabled = false }: TransactionFormProps) {
     });
 
     if (error) {
-      setSubmitError(error.message);
+      setSubmitError(getFriendlyInsertError(error.message));
       return;
     }
 
     setSubmitSuccess("Transaction saved successfully.");
     reset({
       amount: 0,
-      category: "Invested",
+      category: "Health",
       description: "",
     });
     router.refresh();
@@ -113,6 +121,43 @@ export function TransactionForm({ disabled = false }: TransactionFormProps) {
         <CardTitle>Add Transaction</CardTitle>
       </CardHeader>
       <CardContent>
+        {/* Quick Action Buttons */}
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <Button
+            type="button"
+            variant={watch("category") === "Health" ? "default" : "outline"}
+            onClick={() => {
+              setValue("category", "Health", { shouldValidate: true });
+            }}
+            disabled={disabled || isSubmitting}
+            className="gap-2"
+          >
+            💪 Health
+          </Button>
+          <Button
+            type="button"
+            variant={watch("category") === "Learning" ? "default" : "outline"}
+            onClick={() => {
+              setValue("category", "Learning", { shouldValidate: true });
+            }}
+            disabled={disabled || isSubmitting}
+            className="gap-2"
+          >
+            📚 Learning
+          </Button>
+          <Button
+            type="button"
+            variant={watch("category") === "Habits" ? "default" : "outline"}
+            onClick={() => {
+              setValue("category", "Habits", { shouldValidate: true });
+            }}
+            disabled={disabled || isSubmitting}
+            className="gap-2"
+          >
+            ⚠️ Habits
+          </Button>
+        </div>
+
         <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-2">
             <Label htmlFor="amount">Amount (INR)</Label>
@@ -144,9 +189,21 @@ export function TransactionForm({ disabled = false }: TransactionFormProps) {
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {TRANSACTION_CATEGORIES.map((category) => (
+                <div className="p-2 text-xs font-semibold text-slate-500 uppercase">
+                  Growth Investments
+                </div>
+                {GROWTH_CATEGORIES.map((category) => (
                   <SelectItem key={category} value={category}>
-                    {category}
+                    💚 {category}
+                  </SelectItem>
+                ))}
+                <div className="my-1 h-px bg-slate-200" />
+                <div className="p-2 text-xs font-semibold text-slate-500 uppercase">
+                  Wasteful Spending
+                </div>
+                {WASTE_CATEGORIES.map((category) => (
+                  <SelectItem key={category} value={category}>
+                    ❌ {category}
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -1,12 +1,21 @@
-import { calculateValuation } from "@/utils/valuation";
+import { calculateValuation } from "@/utils/valuation-company";
+import { GROWTH_CATEGORIES, WASTE_CATEGORIES } from "@/types/valuation";
 import type { Transaction } from "@/types/valuation";
 
 export interface ValuationSeriesPoint {
   isoDate: string;
   label: string;
   valuation: number;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
   upTrend: number | null;
   downTrend: number | null;
+  volume: number;
+  investedAmount: number;
+  wastedAmount: number;
+  soldAmount: number;
 }
 
 function toUtcDateKey(date: Date): string {
@@ -89,6 +98,7 @@ export function buildValuationSeries(
   const includedTransactions: Transaction[] = [];
   const series: ValuationSeriesPoint[] = [];
   let transactionCursor = 0;
+  let previousValuation = 0;
 
   for (
     let currentDate = firstDate;
@@ -97,6 +107,11 @@ export function buildValuationSeries(
   ) {
     const dayEnd = endOfUtcDay(currentDate).getTime();
 
+    // Track daily transactions for volume calculation
+    const dailyTransactions: Transaction[] = [];
+    let dailyInvested = 0;
+    let dailyWasted = 0;
+
     while (transactionCursor < sorted.length) {
       const timestamp = new Date(sorted[transactionCursor].timestamp).getTime();
       if (timestamp > dayEnd) {
@@ -104,6 +119,23 @@ export function buildValuationSeries(
       }
 
       includedTransactions.push(sorted[transactionCursor]);
+      dailyTransactions.push(sorted[transactionCursor]);
+
+      // Calculate daily amounts by category
+      if (
+        (GROWTH_CATEGORIES as readonly string[]).includes(
+          sorted[transactionCursor].category
+        )
+      ) {
+        dailyInvested += sorted[transactionCursor].amount;
+      } else if (
+        (WASTE_CATEGORIES as readonly string[]).includes(
+          sorted[transactionCursor].category
+        )
+      ) {
+        dailyWasted += sorted[transactionCursor].amount;
+      }
+
       transactionCursor += 1;
     }
 
@@ -111,17 +143,29 @@ export function buildValuationSeries(
       now: endOfUtcDay(currentDate),
     });
 
+    const currentValuation = metrics.currentValuation;
     const isoDate = toUtcDateKey(currentDate);
+
     series.push({
       isoDate,
       label: new Intl.DateTimeFormat("en-IN", {
         day: "2-digit",
         month: "short",
       }).format(currentDate),
-      valuation: metrics.currentValuation,
+      valuation: currentValuation,
+      open: previousValuation || currentValuation,
+      high: Math.max(previousValuation || currentValuation, currentValuation),
+      low: Math.min(previousValuation || currentValuation, currentValuation),
+      close: currentValuation,
       upTrend: null,
       downTrend: null,
+      volume: dailyTransactions.length,
+      investedAmount: dailyInvested,
+      wastedAmount: dailyWasted,
+      soldAmount: 0,
     });
+
+    previousValuation = currentValuation;
   }
 
   return buildTrendLines(series);

@@ -14,13 +14,13 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Personal Valuation Tracker",
-  description: "Track your personal valuation using startup accounting principles. Monitor investments, waste, overhead, and watch your ROI decay with inactivity.",
+  title: "Personal Company Simulator",
+  description: "Run your personal life like a company. Invest in growth, cut waste, and avoid bankruptcy through your spending choices.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Valuation Tracker",
+    title: "Personal Company Simulator",
   },
   formatDetection: {
     telephone: false,

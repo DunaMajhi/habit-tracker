@@ -1,8 +1,8 @@
 // Service Worker for Personal Valuation Tracker PWA
 // Handles offline caching and app shell strategy
 
-const CACHE_NAME = "pvt-cache-v1";
-const RUNTIME_CACHE = "pvt-runtime-v1";
+const CACHE_NAME = "pvt-cache-v2";
+const RUNTIME_CACHE = "pvt-runtime-v2";
 
 const ASSETS_TO_CACHE = [
   "/",
@@ -66,6 +66,14 @@ self.addEventListener("fetch", (event) => {
           // Return cached response if network fails
           return caches.match(request);
         })
+    );
+    return;
+  }
+
+  // For page navigations, always try network first so UI updates aren't stuck behind old HTML.
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request).catch(() => caches.match(request))
     );
     return;
   }
